@@ -659,8 +659,18 @@ let STATE = {
 
 function setRoute(route) {
   STATE.route = route;
+  history.pushState(route, "");
   render();
 }
+
+window.addEventListener("popstate", function(e) {
+  if (e.state) {
+    STATE.route = e.state;
+  } else {
+    STATE.route = { view: "login" };
+  }
+  render();
+});
 
 function showToast(msg) {
   STATE.toast = msg;
@@ -673,6 +683,7 @@ async function init() {
   STATE.content = await loadContent();
   STATE.companies = await loadCompanies();
   STATE.adminPw = await loadAdminPw();
+  history.replaceState(STATE.route, "");
   render();
 }
 
