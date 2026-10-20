@@ -478,6 +478,37 @@
     .hero-photo { width: 100px; height: 100px; }
     .timeline-row { grid-template-columns: 90px 1fr; }
   }
+
+  /* Foto-Upload (Admin) + Lightbox */
+  .detail-story { white-space: pre-line; }
+  .photo-slot.clickable img { cursor: zoom-in; }
+  .photo-slot img.loading { opacity: 0.3; }
+  .photo-admin-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .photo-thumb {
+    position: relative; width: 110px; height: 74px;
+    border: 1px solid var(--paper-line); border-radius: var(--radius);
+    overflow: hidden; background: #eae6db;
+  }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-thumb img.loading { opacity: 0.3; }
+  .photo-thumb.empty {
+    display: flex; align-items: center; justify-content: center;
+    border-style: dashed; font-size: 10px; letter-spacing: 0.05em; color: var(--ink-soft);
+  }
+  .photo-thumb .thumb-x {
+    position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; padding: 0;
+    border: 0; border-radius: 50%; background: rgba(28,43,34,0.78); color: #fff;
+    font-size: 13px; line-height: 20px; cursor: pointer;
+  }
+  .photo-thumb .thumb-x:hover { background: #8a2b2b; }
+  .photo-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .file-btn { cursor: pointer; }
+  .lightbox {
+    position: fixed; inset: 0; z-index: 1000; padding: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(20,26,22,0.92); cursor: zoom-out;
+  }
+  .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
 </style>
 </head>
 <body>
@@ -485,7 +516,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 /* ====================================================================
    FIREBASE-KONFIGURATION
@@ -503,7 +534,7 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 
-window.__fb = { doc, getDoc, setDoc, deleteField, db };
+window.__fb = { doc, getDoc, setDoc, deleteDoc, deleteField, db };
 window.__fbReady = true;
 </script>
 
@@ -960,18 +991,129 @@ const PAGE_TITLES = {
   projects: "Projekte & Highlights"
 };
 
-function renderPhotoGallery(photos) {
-  if (!photos || photos.length === 0) return "";
-  const slots = photos.map((url, i) => {
-    if (url) {
-      return `<div class="photo-slot"><img src="${escapeHtml(url)}" alt="Foto ${i+1}" loading="lazy"></div>`;
-    } else {
-      return `<div class="photo-slot placeholder">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
-        <span>Foto ${i+1}</span>
-      </div>`;
+/* ---------- Fotos: Speicherung in Firestore (cv_app/photo_<id>) ----------
+   photos[] eines Eintrags darf enthalten:
+     ""            -> leerer Platzhalter (nur im Admin sichtbar)
+     "fs:<id>"     -> hochgeladenes Foto, liegt in Firestore
+     "https://..." -> externes Bild oder relativer Pfad (z. B. images/foto1.jpg)
+*/
+const PHOTO_PREFIX = "photo_";
+const PHOTO_MAX_EDGE = 1400;          // längste Kante in Pixeln
+const PHOTO_MAX_CHARS = 850000;       // Firestore-Dokument darf < 1 MiB sein
+const PHOTO_BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+const PHOTO_CACHE = {};
+const PHOTO_PENDING = {};
+
+function isRealPhoto(p) { return typeof p === "string" && p.trim() !== ""; }
+
+function photoImgTag(ref, alt) {
+  const safeAlt = escapeHtml(alt);
+  if (ref.startsWith("fs:")) {
+    const id = ref.slice(3);
+    const cached = PHOTO_CACHE[id];
+    return cached
+      ? `<img src="${cached}" alt="${safeAlt}" data-fs="${escapeHtml(id)}">`
+      : `<img class="loading" src="${PHOTO_BLANK}" alt="${safeAlt}" data-fs="${escapeHtml(id)}">`;
+  }
+  return `<img src="${escapeHtml(ref)}" alt="${safeAlt}" loading="lazy">`;
+}
+
+async function loadPhoto(id) {
+  if (PHOTO_CACHE[id]) return PHOTO_CACHE[id];
+  if (!PHOTO_PENDING[id]) {
+    PHOTO_PENDING[id] = storageGet(PHOTO_PREFIX + id).then(v => {
+      if (v) PHOTO_CACHE[id] = v;
+      delete PHOTO_PENDING[id];
+      return v;
+    });
+  }
+  return PHOTO_PENDING[id];
+}
+
+function hydratePhotos() {
+  document.querySelectorAll("img[data-fs]").forEach(async (img) => {
+    const src = await loadPhoto(img.getAttribute("data-fs"));
+    if (!img.isConnected) return;
+    if (src) { img.src = src; img.classList.remove("loading"); }
+    else { img.alt = "Bild nicht verfügbar"; }
+  });
+}
+
+function fileToImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Format nicht lesbar (z. B. HEIC bitte vorher in JPG umwandeln)")); };
+    img.src = url;
+  });
+}
+
+async function resizeImage(file) {
+  const img = await fileToImage(file);
+  const W = img.naturalWidth, H = img.naturalHeight;
+  if (!W || !H) throw new Error("Bild ist leer");
+  let edge = PHOTO_MAX_EDGE;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const scale = Math.min(1, edge / Math.max(W, H));
+    const w = Math.max(1, Math.round(W * scale)), h = Math.max(1, Math.round(H * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    for (const q of [0.85, 0.75, 0.65, 0.55]) {
+      const out = canvas.toDataURL("image/jpeg", q);
+      if (out.length <= PHOTO_MAX_CHARS) return out;
     }
-  }).join("");
+    edge = Math.round(edge * 0.8);
+  }
+  throw new Error("Bild lässt sich nicht klein genug rechnen");
+}
+
+function openLightbox(src) {
+  closeLightbox();
+  const box = document.createElement("div");
+  box.className = "lightbox";
+  box.id = "lightbox";
+  const im = document.createElement("img");
+  im.src = src;
+  box.appendChild(im);
+  box.addEventListener("click", closeLightbox);
+  document.body.appendChild(box);
+}
+function closeLightbox() {
+  const box = document.getElementById("lightbox");
+  if (box) box.remove();
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
+document.addEventListener("click", (e) => {
+  const img = e.target && e.target.closest ? e.target.closest(".photo-slot.clickable img") : null;
+  if (img && !img.classList.contains("loading")) openLightbox(img.src);
+});
+
+// Übernimmt die aktuellen Eingaben der Einträge aus dem DOM in STATE (ohne zu speichern)
+function syncEntryFields(key) {
+  document.querySelectorAll(`[data-entry-field][data-key="${key}"]`).forEach(input => {
+    const idx = parseInt(input.getAttribute("data-index"), 10);
+    const field = input.getAttribute("data-entry-field");
+    const entry = STATE.content[key][idx];
+    if (!entry) return;
+    if (field === "bullets") {
+      entry.bullets = input.value.split("\n").map(s => s.trim()).filter(Boolean);
+    } else {
+      entry[field] = input.value;
+    }
+  });
+}
+
+function renderPhotoGallery(photos) {
+  const real = (photos || []).filter(isRealPhoto);
+  if (!real.length) return "";
+  const slots = real.map((ref, i) =>
+    `<div class="photo-slot clickable">${photoImgTag(ref, "Foto " + (i + 1))}</div>`
+  ).join("");
   return `<div class="photo-gallery">${slots}</div>`;
 }
 
@@ -1159,7 +1301,13 @@ function renderAdmin() {
 }
 
 function renderEntryListEditor(key, label, entries) {
-  const cards = entries.map((e, i) => `
+  const cards = entries.map((e, i) => {
+    const photos = Array.isArray(e.photos) ? e.photos : [];
+    const thumbs = photos.map((p, pi) => isRealPhoto(p)
+      ? `<div class="photo-thumb">${photoImgTag(p, "Foto " + (pi + 1))}<button class="thumb-x" title="Foto entfernen" data-action="remove-photo" data-key="${key}" data-index="${i}" data-photo="${pi}">×</button></div>`
+      : `<div class="photo-thumb empty">Platzhalter<button class="thumb-x" title="Platzhalter entfernen" data-action="remove-photo" data-key="${key}" data-index="${i}" data-photo="${pi}">×</button></div>`
+    ).join("");
+    return `
     <div class="entry-card" data-entry-key="${key}" data-index="${i}">
       <div class="entry-card-head">
         <b>${escapeHtml(e.title) || "(ohne Titel)"}</b>
@@ -1168,9 +1316,22 @@ function renderEntryListEditor(key, label, entries) {
       <div class="editor-field"><label>Zeitraum</label><input data-entry-field="when" data-key="${key}" data-index="${i}" value="${escapeHtml(e.when)}"/></div>
       <div class="editor-field"><label>Titel</label><input data-entry-field="title" data-key="${key}" data-index="${i}" value="${escapeHtml(e.title)}"/></div>
       <div class="editor-field"><label>Organisation / Ort</label><input data-entry-field="org" data-key="${key}" data-index="${i}" value="${escapeHtml(e.org)}"/></div>
+      <div class="editor-field"><label>Story (Fließtext, Absätze mit Leerzeile)</label><textarea class="editor" data-entry-field="story" data-key="${key}" data-index="${i}">${escapeHtml(e.story || "")}</textarea></div>
       <div class="editor-field"><label>Beschreibung (eine Zeile pro Punkt)</label><textarea class="editor" data-entry-field="bullets" data-key="${key}" data-index="${i}">${escapeHtml((e.bullets || []).join("\n"))}</textarea></div>
-    </div>
-  `).join("");
+      <div class="editor-field">
+        <label>Fotos</label>
+        <div class="photo-admin-grid">${thumbs || `<span class="small-note">Noch keine Fotos.</span>`}</div>
+        <div class="photo-actions">
+          <label class="btn ghost file-btn"><span class="file-btn-text">+ Fotos hochladen</span><input type="file" accept="image/*" multiple hidden data-action="upload-photos" data-key="${key}" data-index="${i}"/></label>
+          <span class="small-note">JPG/PNG, werden automatisch verkleinert und sofort gespeichert.</span>
+        </div>
+        <div class="inline-form" style="margin-bottom:0;">
+          <input type="text" placeholder="oder Bild-URL einfügen (https://… oder images/foto.jpg)" data-photo-url-input data-key="${key}" data-index="${i}"/>
+          <button class="btn ghost" data-action="add-photo-url" data-key="${key}" data-index="${i}">Hinzufügen</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
 
   return `
   <div class="panel">
@@ -1261,7 +1422,7 @@ function attachAdminHandlers() {
   document.querySelectorAll('[data-action="add-entry"]').forEach(btn => {
     btn.addEventListener("click", () => {
       const key = btn.getAttribute("data-key");
-      STATE.content[key].push({ when: "", title: "", org: "", bullets: [] });
+      STATE.content[key].push({ when: "", title: "", org: "", story: "", photos: [], bullets: [] });
       render();
     });
   });
@@ -1279,18 +1440,89 @@ function attachAdminHandlers() {
   document.querySelectorAll('[data-action="save-entries"]').forEach(btn => {
     btn.addEventListener("click", async () => {
       const key = btn.getAttribute("data-key");
-      document.querySelectorAll(`[data-entry-field][data-key="${key}"]`).forEach(input => {
-        const idx = parseInt(input.getAttribute("data-index"), 10);
-        const field = input.getAttribute("data-entry-field");
-        if (!STATE.content[key][idx]) return;
-        if (field === "bullets") {
-          STATE.content[key][idx].bullets = input.value.split("\n").map(s => s.trim()).filter(Boolean);
-        } else {
-          STATE.content[key][idx][field] = input.value;
-        }
-      });
+      syncEntryFields(key);
       await saveContent(STATE.content);
       showToast("Gespeichert.");
+    });
+  });
+
+  document.querySelectorAll('[data-action="upload-photos"]').forEach(inp => {
+    inp.addEventListener("change", async () => {
+      const key = inp.getAttribute("data-key");
+      const idx = parseInt(inp.getAttribute("data-index"), 10);
+      const files = Array.from(inp.files || []);
+      if (!files.length) return;
+      syncEntryFields(key);
+      const entry = STATE.content[key][idx];
+      if (!entry) return;
+      if (!Array.isArray(entry.photos)) entry.photos = [];
+      const label = inp.parentElement.querySelector(".file-btn-text");
+      let added = 0;
+      const failed = [];
+      for (let n = 0; n < files.length; n++) {
+        const file = files[n];
+        if (label) label.textContent = `Lade ${n + 1}/${files.length} …`;
+        try {
+          if (!file.type.startsWith("image/")) throw new Error("kein Bild");
+          const dataUrl = await resizeImage(file);
+          const id = genCode(10);
+          const ok = await storageSet(PHOTO_PREFIX + id, dataUrl);
+          if (!ok) throw new Error("Speichern in Firestore fehlgeschlagen");
+          PHOTO_CACHE[id] = dataUrl;
+          const ref = "fs:" + id;
+          const empty = entry.photos.findIndex(p => !isRealPhoto(p));
+          if (empty >= 0) entry.photos[empty] = ref; else entry.photos.push(ref);
+          added++;
+        } catch (err) {
+          console.error("Foto-Upload", file.name, err);
+          failed.push(`${file.name} (${err.message})`);
+        }
+      }
+      if (added) await saveContent(STATE.content);
+      showToast(failed.length
+        ? `${added} Foto(s) gespeichert. Fehler: ${failed.join("; ")}`
+        : `${added} Foto(s) hochgeladen.`);
+    });
+  });
+
+  document.querySelectorAll('[data-action="add-photo-url"]').forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const key = btn.getAttribute("data-key");
+      const idx = parseInt(btn.getAttribute("data-index"), 10);
+      const field = document.querySelector(`[data-photo-url-input][data-key="${key}"][data-index="${idx}"]`);
+      const url = field ? field.value.trim() : "";
+      if (!url) { showToast("Bitte eine Bild-URL eingeben."); return; }
+      syncEntryFields(key);
+      const entry = STATE.content[key][idx];
+      if (!entry) return;
+      if (!Array.isArray(entry.photos)) entry.photos = [];
+      const empty = entry.photos.findIndex(p => !isRealPhoto(p));
+      if (empty >= 0) entry.photos[empty] = url; else entry.photos.push(url);
+      await saveContent(STATE.content);
+      showToast("Foto hinzugefügt.");
+    });
+  });
+
+  document.querySelectorAll('[data-action="remove-photo"]').forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const key = btn.getAttribute("data-key");
+      const idx = parseInt(btn.getAttribute("data-index"), 10);
+      const pi = parseInt(btn.getAttribute("data-photo"), 10);
+      syncEntryFields(key);
+      const entry = STATE.content[key][idx];
+      if (!entry || !Array.isArray(entry.photos)) return;
+      const ref = entry.photos[pi];
+      entry.photos.splice(pi, 1);
+      await saveContent(STATE.content);
+      if (typeof ref === "string" && ref.startsWith("fs:")) {
+        const id = ref.slice(3);
+        delete PHOTO_CACHE[id];
+        try {
+          const { doc, deleteDoc, db } = window.__fb;
+          await deleteDoc(doc(db, FS_COLLECTION, PHOTO_PREFIX + id));
+        } catch (e) { console.error("Foto löschen", e); }
+      }
+      render();
     });
   });
 
@@ -1363,6 +1595,8 @@ function render() {
   else if (r.view === "detail") attachDetailHandlers(r.code);
   else if (r.view === "admin_login") attachAdminLoginHandlers();
   else if (r.view === "admin") attachAdminHandlers();
+
+  hydratePhotos();
 }
 
 init();
