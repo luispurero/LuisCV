@@ -354,6 +354,44 @@
   }
   .detail-entry li { margin-bottom: 6px; }
 
+  /* Unterabschnitte (aufklappbare Sub-Blöcke innerhalb eines Eintrags) */
+  .subsections { margin-top: 28px; display: grid; gap: 10px; }
+  .subsection {
+    border: 1px solid var(--paper-line);
+    border-radius: var(--radius);
+    background: #fffdf8;
+  }
+  .subsection > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 13px 44px 13px 16px;
+    position: relative;
+    font-weight: 600;
+    font-size: 14.5px;
+    color: var(--blueprint);
+    line-height: 1.35;
+  }
+  .subsection > summary::-webkit-details-marker { display: none; }
+  .subsection > summary::after {
+    content: "+";
+    position: absolute; right: 16px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--brass); font-size: 18px; font-weight: 400;
+  }
+  .subsection[open] > summary::after { content: "\2212"; }
+  .subsection[open] > summary { border-bottom: 1px solid var(--paper-line); }
+  .subsection-body { padding: 4px 16px 16px; }
+  .detail-sub-text {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink);
+    margin: 12px 0;
+    max-width: 640px;
+    white-space: pre-line;
+  }
+  .subsection-body ul { margin: 10px 0 0; }
+
   /* Skills rich layout */
   .skill-group {
     margin-bottom: 26px;
@@ -453,6 +491,11 @@
   }
   .entry-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .entry-card-head b { font-size: 13px; }
+  .sub-card { border: 1px solid var(--paper-line); border-left: 3px solid var(--brass); border-radius: var(--radius); padding: 12px 12px 2px; margin: 8px 0 12px; background: #fffdf8; }
+  .sub-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .sub-card-head b { font-size: 12.5px; }
+  .sub-card-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+  .icon-btn[disabled] { opacity: 0.35; cursor: default; }
 
   .empty-note { font-size: 12.5px; color: var(--ink-soft); font-style: italic; padding: 10px 0; }
 
@@ -560,13 +603,50 @@ const DEFAULT_CONTENT = {
       when: "01/2024 – Heute",
       title: "Systementwicklung Brennstoffzellensysteme",
       org: "H2Power n Heat, Berlin",
-      story: "Seit Anfang 2024 entwickle ich bei H2 Power 'n' Heat PEM-Brennstoffzellensysteme — von der Simulation über die Auslegung bis zum fertigen Prototyp. Ich bin dabei in alle Phasen eingebunden: Berechnungen am Schreibtisch morgens, Prüfstandsarbeit und Zerspanung nachmittags. Was mich antreibt ist das direkte Feedback zwischen Konstruktion und Realtest.",
+      story: "Seit Anfang 2024 entwickle ich bei H2 Power 'n' Heat PEM-Brennstoffzellensysteme – von der Simulation über die Auslegung bis zum fertigen Prototyp. Weil ich Berechnung, Prüfstandsarbeit und Zerspanung selbst abdecke, sehe ich unmittelbar, wie sich eine Auslegung in der Praxis bewährt. Dieses direkte Feedback zwischen Konstruktion und Realtest treibt mich an.",
       photos: ["", "", ""],
       bullets: [
         "Simulation von PEM-Brennstoffzellensystemen",
         "Vorentwicklung und Auslegung",
         "Konstruktion, Prototyping, Montage- und Prüfstandsarbeit",
         "Fertigung (Zerspanung und additive Fertigungsverfahren)"
+      ],
+      sections: [
+        {
+          "title": "Prüfstand und Versuche",
+          "text": "Am Prüfstand arbeite ich an Aufbau, Betrieb und Auswertung der Versuche mit: von der Medienversorgung für Kühlwasser und Wasserstoff über die Überwachung der Betriebsparameter am Leitstand bis zur Auswertung der Messdaten direkt nach dem Versuch.\n\nDazu gehört auch das, was Versuche erst möglich macht: Dichtigkeitsprüfungen an den wasserstoffführenden Leitungen vor jedem Versuch, ein blasenfrei entlüfteter Kühlkreislauf (Lufteinschlüsse führen zu lokalen Hotspots) und die laufende Kontrolle der Kühlwasser-Leitfähigkeit, damit der Stack elektrisch isoliert bleibt. Bei Inbetriebnahmen prüfe ich die Subsysteme schrittweise, kontrolliere Sensorik und Aktorik und suche gemeinsam mit den verantwortlichen Ingenieuren nach hardwareseitigen Fehlerursachen.",
+          "bullets": []
+        },
+        {
+          "title": "Konstruktion und Fertigung",
+          "text": "Prototypen entstehen in kurzen Iterationen. Ich konstruiere Prüfstandsadapter und Funktionsmuster in PTC Creo (ergänzend Autodesk Fusion 360), drucke sie zunächst selbst und fertige sie dort, wo Temperatur oder Dichtheit es verlangen, in Aluminium an der Fräsmaschine.\n\nDaraus habe ich Regeln für meine Konstruktion abgeleitet: Sensoraufnahmen integriere ich in bestehende Halterungen, um Bauraum und Schnittstellen zu sparen. Bei gedruckten Teilen setze ich auf durchgehende Verschraubungen statt eingeschmolzener Gewindeeinsätze. Thermisch belastete Teile plane ich gleich für die Zerspanung. Und vor jeder Fertigung kläre ich in einem internen Lastenheft Medienbeständigkeit, Druck, Temperatur und Oberflächenanforderungen an Dichtflächen.",
+          "bullets": []
+        },
+        {
+          "title": "Fallstudie: Prüfstandssensorik im Kathodenpfad",
+          "text": "Für die Validierung am Prüfstand fehlten Messgrößen, die das Seriensystem nicht vorsieht: Temperatur und Druck direkt nach dem Kathodenradialverdichter sowie die relative Feuchte nach dem Befeuchter. Dafür habe ich Sensoraufnahmen konstruiert, zunächst im 3D-Druck aus PLA – die Medientemperaturen galten als moderat, und ich brauchte schnell Hardware im Versuch.\n\nIm Betrieb zeigte sich die Grenze des Materials. Die Feuchtesensor-Aufnahme verformte sich unter dem warmen, befeuchteten Gasstrom und wurde undicht; ich habe sie fertigungsgerecht umkonstruiert und als Aluminiumteil selbst gefräst. Beim Adapter hinter dem Verdichter kam eine zweite Ursache hinzu: Neben der thermischen Verformung machte die starre Verschraubung das System statisch überbestimmt. Die Verspannung übertrug sich auf den Verdichterflansch und führte dort zu Leckagen. Mit einer schwimmenden Lagerung, die aus der Serie adaptiert wurde, habe ich die Bauteile mechanisch entkoppelt – die Flanschleckagen waren damit beseitigt.\n\nBegrenzt blieb der Aufbau durch die Erweichungstemperatur der gedruckten Teile. Für höhere Temperaturen und Drücke habe ich deshalb ein hochbelastbares Aluminiumbauteil konstruiert; die Fertigung ist vorgesehen. Was ich mitnehme: Bei unklaren Randbedingungen ist der schnelle Druck richtig, thermisch belastete Teile konzipiere ich aber von Beginn an für die Zerspanung.",
+          "bullets": [
+            "Sensorintegration im Kathodenpfad (T/p nach Verdichter, rH nach Befeuchter)",
+            "Fehleranalyse: thermisches Kriechen, statische Überbestimmung, Flanschleckagen",
+            "Fertigungswechsel PLA → Aluminium, Fräsen in Eigenregie",
+            "Mechanische Entkopplung durch schwimmende Lagerung"
+          ]
+        },
+        {
+          "title": "Digitale Systemabbildung",
+          "text": "Ich habe die digitale Systemabbildung mit aufgebaut: das R&I-Schema in Visio auf dem real gebauten Stand gehalten, die CAD-Baugruppenstruktur in Creo definiert (mit vereinfachten Platzhaltermodellen für Zukaufteile und den real verlegten Leitungswegen zur Kollisionsprüfung) und Namenskonventionen für das parallele Arbeiten mehrerer Ingenieure mit etabliert.\n\nDas R&I-Schema diente dabei als verlässliche gemeinsame Grundlage für Softwareentwicklung und Versuchsplanung.",
+          "bullets": []
+        },
+        {
+          "title": "Packaging-Studien für mobile Anwendungen",
+          "text": "Ziel der Digital-Mock-Up-Studien war es, auf Basis von Konzeptmodellen und Zuliefererdaten die Anordnung der Komponenten in mobilen Anwendungen zu bestimmen. Bei der Anhängervariante musste das komplette Brennstoffzellensystem samt Peripherie und Leistungselektronik untergebracht werden. Der Zielkonflikt: Die schweren Metallhydridspeicher sollten für die Fahrstabilität möglichst tief und zentral liegen, mussten aber für den regelmäßigen Wechsel entnehmbar bleiben. Ich habe verschiedene Layouts untersucht, Kollisionsräume für den Auszug der Speicher definiert und die Stapelbarkeit der übrigen Komponenten geprüft. Das Ergebnis legte die nötigen Ladeflächenmaße und die Nutzlastklasse fest und diente als Entscheidungsgrundlage für die Beschaffung des Anhängers.\n\nErgänzend habe ich eine Machbarkeitsstudie zur Integration einer Druckgasflasche in ein leichtes Nutzfahrzeug unterstützt: Platzierung der digitalen Modelle in Laderaum und Unterboden, Kollisionsprüfung und Bewertung der Ventilzugänglichkeit.",
+          "bullets": [
+            "Digital-Mock-Up-Studien auf Basis von Konzeptmodellen und Zuliefererdaten",
+            "Zielkonflikt Schwerpunkt vs. Wechselbarkeit der Wasserstoffspeicher",
+            "Kollisionsprüfung und Zugänglichkeitsbewertung",
+            "Ergebnis: Entscheidungsgrundlage für die Anhänger-Beschaffung"
+          ]
+        }
       ]
     },
     {
@@ -718,13 +798,43 @@ async function storageSet(key, value) {
   }
 }
 
+/* Einmalige Inhalts-Updates für bereits in Firestore gespeicherte Inhalte.
+   Jeder Patch läuft genau einmal (Kennung steht danach in content._patches)
+   und überschreibt nur die genannten Felder; Fotos, andere Einträge und
+   spätere Änderungen im Admin-Bereich bleiben unberührt. */
+const CONTENT_PATCHES = {
+  "h2-sections-v1": (c) => {
+    const find = (list) => (list || []).find(e => /H2\s*Power/i.test(e.org || ""));
+    const target = find(c.experience);
+    const src = find(DEFAULT_CONTENT.experience);
+    if (!target || !src) return false;
+    target.story = src.story;
+    target.sections = JSON.parse(JSON.stringify(src.sections || []));
+    return true;
+  }
+};
+function applyContentPatches(content) {
+  if (!Array.isArray(content._patches)) content._patches = [];
+  let changed = false;
+  for (const [id, fn] of Object.entries(CONTENT_PATCHES)) {
+    if (content._patches.includes(id)) continue;
+    if (fn(content)) { content._patches.push(id); changed = true; }
+  }
+  return changed;
+}
+
 async function loadContent() {
   const raw = await storageGet(TOPIC_KEY);
   if (!raw) {
-    await storageSet(TOPIC_KEY, JSON.stringify(DEFAULT_CONTENT));
-    return JSON.parse(JSON.stringify(DEFAULT_CONTENT));
+    const fresh = JSON.parse(JSON.stringify(DEFAULT_CONTENT));
+    applyContentPatches(fresh);
+    await storageSet(TOPIC_KEY, JSON.stringify(fresh));
+    return fresh;
   }
-  try { return JSON.parse(raw); } catch (e) { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
+  let content;
+  try { content = JSON.parse(raw); } catch (e) { return JSON.parse(JSON.stringify(DEFAULT_CONTENT)); }
+  if (applyContentPatches(content)) await storageSet(TOPIC_KEY, JSON.stringify(content));
+  return content;
 }
 async function saveContent(content) {
   return storageSet(TOPIC_KEY, JSON.stringify(content));
@@ -1106,6 +1216,16 @@ function syncEntryFields(key) {
       entry[field] = input.value;
     }
   });
+  document.querySelectorAll(`[data-section-field][data-key="${key}"]`).forEach(input => {
+    const idx = parseInt(input.getAttribute("data-index"), 10);
+    const sidx = parseInt(input.getAttribute("data-sindex"), 10);
+    const field = input.getAttribute("data-section-field");
+    const entry = STATE.content[key][idx];
+    if (!entry || !Array.isArray(entry.sections) || !entry.sections[sidx]) return;
+    entry.sections[sidx][field] = field === "bullets"
+      ? input.value.split("\n").map(s => s.trim()).filter(Boolean)
+      : input.value;
+  });
 }
 
 function renderPhotoGallery(photos) {
@@ -1115,6 +1235,18 @@ function renderPhotoGallery(photos) {
     `<div class="photo-slot clickable">${photoImgTag(ref, "Foto " + (i + 1))}</div>`
   ).join("");
   return `<div class="photo-gallery">${slots}</div>`;
+}
+
+function renderSubsection(s) {
+  const text = s.text ? `<div class="detail-sub-text">${escapeHtml(s.text)}</div>` : "";
+  const bullets = s.bullets && s.bullets.length
+    ? `<ul>${s.bullets.map(b => `<li>${escapeHtml(b)}</li>`).join("")}</ul>`
+    : "";
+  return `
+    <details class="subsection" open>
+      <summary>${escapeHtml(s.title || "")}</summary>
+      <div class="subsection-body">${text}${bullets}</div>
+    </details>`;
 }
 
 function renderDetail(code, page) {
@@ -1130,6 +1262,10 @@ function renderDetail(code, page) {
       const bullets = e.bullets && e.bullets.length
         ? `<ul>${e.bullets.map(b => `<li>${escapeHtml(b)}</li>`).join("")}</ul>`
         : "";
+      const subs = Array.isArray(e.sections) ? e.sections.filter(s => s && (s.title || s.text || (s.bullets && s.bullets.length))) : [];
+      const sections = subs.length
+        ? `<div class="subsections">${subs.map(renderSubsection).join("")}</div>`
+        : "";
       return `
       <div class="detail-entry">
         <div class="detail-entry-header">
@@ -1140,6 +1276,7 @@ function renderDetail(code, page) {
         ${gallery}
         ${story}
         ${bullets}
+        ${sections}
       </div>`;
     }).join("") || `<div class="empty-note">Noch keine Einträge vorhanden.</div>`;
   } else if (page === "skills") {
@@ -1307,6 +1444,21 @@ function renderEntryListEditor(key, label, entries) {
       ? `<div class="photo-thumb">${photoImgTag(p, "Foto " + (pi + 1))}<button class="thumb-x" title="Foto entfernen" data-action="remove-photo" data-key="${key}" data-index="${i}" data-photo="${pi}">×</button></div>`
       : `<div class="photo-thumb empty">Platzhalter<button class="thumb-x" title="Platzhalter entfernen" data-action="remove-photo" data-key="${key}" data-index="${i}" data-photo="${pi}">×</button></div>`
     ).join("");
+    const secs = Array.isArray(e.sections) ? e.sections : [];
+    const sectionCards = secs.map((s, si) => `
+        <div class="sub-card">
+          <div class="sub-card-head">
+            <b>${escapeHtml(s.title) || "(ohne Überschrift)"}</b>
+            <span class="sub-card-actions">
+              <button class="icon-btn" title="nach oben" data-action="move-section" data-dir="-1" data-key="${key}" data-index="${i}" data-sindex="${si}"${si === 0 ? " disabled" : ""}>↑</button>
+              <button class="icon-btn" title="nach unten" data-action="move-section" data-dir="1" data-key="${key}" data-index="${i}" data-sindex="${si}"${si === secs.length - 1 ? " disabled" : ""}>↓</button>
+              <button class="icon-btn danger" data-action="remove-section" data-key="${key}" data-index="${i}" data-sindex="${si}">Entfernen</button>
+            </span>
+          </div>
+          <div class="editor-field"><label>Überschrift</label><input data-section-field="title" data-key="${key}" data-index="${i}" data-sindex="${si}" value="${escapeHtml(s.title || "")}"/></div>
+          <div class="editor-field"><label>Text (Absätze mit Leerzeile)</label><textarea class="editor" data-section-field="text" data-key="${key}" data-index="${i}" data-sindex="${si}">${escapeHtml(s.text || "")}</textarea></div>
+          <div class="editor-field"><label>Stichpunkte (optional, eine Zeile pro Punkt)</label><textarea class="editor" data-section-field="bullets" data-key="${key}" data-index="${i}" data-sindex="${si}">${escapeHtml((s.bullets || []).join("\n"))}</textarea></div>
+        </div>`).join("");
     return `
     <div class="entry-card" data-entry-key="${key}" data-index="${i}">
       <div class="entry-card-head">
@@ -1318,6 +1470,11 @@ function renderEntryListEditor(key, label, entries) {
       <div class="editor-field"><label>Organisation / Ort</label><input data-entry-field="org" data-key="${key}" data-index="${i}" value="${escapeHtml(e.org)}"/></div>
       <div class="editor-field"><label>Story (Fließtext, Absätze mit Leerzeile)</label><textarea class="editor" data-entry-field="story" data-key="${key}" data-index="${i}">${escapeHtml(e.story || "")}</textarea></div>
       <div class="editor-field"><label>Beschreibung (eine Zeile pro Punkt)</label><textarea class="editor" data-entry-field="bullets" data-key="${key}" data-index="${i}">${escapeHtml((e.bullets || []).join("\n"))}</textarea></div>
+      <div class="editor-field">
+        <label>Unterabschnitte (erscheinen aufklappbar unter dem Eintrag)</label>
+        ${sectionCards || `<span class="small-note">Noch keine Unterabschnitte.</span>`}
+        <div><button class="btn ghost" data-action="add-section" data-key="${key}" data-index="${i}">+ Unterabschnitt hinzufügen</button></div>
+      </div>
       <div class="editor-field">
         <label>Fotos</label>
         <div class="photo-admin-grid">${thumbs || `<span class="small-note">Noch keine Fotos.</span>`}</div>
@@ -1422,7 +1579,53 @@ function attachAdminHandlers() {
   document.querySelectorAll('[data-action="add-entry"]').forEach(btn => {
     btn.addEventListener("click", () => {
       const key = btn.getAttribute("data-key");
-      STATE.content[key].push({ when: "", title: "", org: "", story: "", photos: [], bullets: [] });
+      STATE.content[key].push({ when: "", title: "", org: "", story: "", photos: [], bullets: [], sections: [] });
+      render();
+    });
+  });
+
+  document.querySelectorAll('[data-action="add-section"]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.getAttribute("data-key");
+      const idx = parseInt(btn.getAttribute("data-index"), 10);
+      syncEntryFields(key);
+      const entry = STATE.content[key][idx];
+      if (!entry) return;
+      if (!Array.isArray(entry.sections)) entry.sections = [];
+      entry.sections.push({ title: "", text: "", bullets: [] });
+      render();
+    });
+  });
+
+  document.querySelectorAll('[data-action="remove-section"]').forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const key = btn.getAttribute("data-key");
+      const idx = parseInt(btn.getAttribute("data-index"), 10);
+      const sidx = parseInt(btn.getAttribute("data-sindex"), 10);
+      syncEntryFields(key);
+      const entry = STATE.content[key][idx];
+      if (!entry || !Array.isArray(entry.sections)) return;
+      entry.sections.splice(sidx, 1);
+      await saveContent(STATE.content);
+      render();
+    });
+  });
+
+  document.querySelectorAll('[data-action="move-section"]').forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const key = btn.getAttribute("data-key");
+      const idx = parseInt(btn.getAttribute("data-index"), 10);
+      const sidx = parseInt(btn.getAttribute("data-sindex"), 10);
+      const dir = parseInt(btn.getAttribute("data-dir"), 10);
+      syncEntryFields(key);
+      const entry = STATE.content[key][idx];
+      if (!entry || !Array.isArray(entry.sections)) return;
+      const target = sidx + dir;
+      if (target < 0 || target >= entry.sections.length) return;
+      const tmp = entry.sections[sidx];
+      entry.sections[sidx] = entry.sections[target];
+      entry.sections[target] = tmp;
+      await saveContent(STATE.content);
       render();
     });
   });
